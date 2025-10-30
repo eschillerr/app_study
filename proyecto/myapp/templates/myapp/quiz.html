@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Quiz - AI Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            color: #667eea;
+            text-align: center;
+            font-size: 28px;
+        }
+
+        .documents-info {
+            text-align: center;
+            margin-top: 10px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .chat-container {
+            flex: 1;
+            max-width: 900px;
+            width: 100%;
+            margin: 20px auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            max-height: calc(100vh - 300px);
+        }
+
+        .message {
+            margin-bottom: 20px;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            text-align: right;
+        }
+
+        .message-content {
+            display: inline-block;
+            padding: 15px 20px;
+            border-radius: 18px;
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .message.assistant .message-content {
+            background: #f0f2ff;
+            color: #333;
+            text-align: left;
+        }
+
+        .message-label {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .sources {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .input-area {
+            padding: 20px;
+            border-top: 2px solid #f0f2ff;
+            background: #fafafa;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .input-container input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .input-container input:focus {
+            border-color: #667eea;
+        }
+
+        .btn-send {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-send:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-send:active {
+            transform: translateY(0);
+        }
+
+        .btn-send:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .quick-questions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .quick-btn {
+            padding: 10px 20px;
+            background: white;
+            border: 2px solid #667eea;
+            color: #667eea;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .quick-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            color: #667eea;
+            padding: 10px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .welcome-message {
+            text-align: center;
+            color: #999;
+            padding: 50px 20px;
+        }
+
+        .welcome-message h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            display: none;
+        }
+
+        .error-message.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Study Quiz Assistant</h1>
+        <div class="documents-info">
+            {% if documents %}
+                {{ documents.count }} documento(s) cargado(s)
+            {% else %}
+                No hay documentos cargados
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="chat-container">
+        <div class="chat-messages" id="chatMessages">
+            <div class="welcome-message">
+                <h2>Bienvenido!</h2>
+                <p>Pregúntame sobre los documentos que subiste y te ayudaré a estudiar.</p>
+                <p>Puedo crear quizzes, explicar conceptos, o generar preguntas de práctica.</p>
+            </div>
+        </div>
+
+        <div class="input-area">
+            <div class="error-message" id="errorMessage"></div>
+
+            <div class="quick-questions">
+                <button class="quick-btn" onclick="askQuickQuestion('Crea un quiz de 5 preguntas sobre el contenido')">
+                    Quiz de 5 preguntas
+                </button>
+                <button class="quick-btn" onclick="askQuickQuestion('Resume los puntos principales del documento')">
+                    Resumen
+                </button>
+                <button class="quick-btn" onclick="askQuickQuestion('Explica los conceptos más importantes')">
+                    Conceptos clave
+                </button>
+            </div>
+
+            <div class="loading" id="loading">Pensando...</div>
+
+            <div class="input-container">
+                <input
+                    type="text"
+                    id="questionInput"
+                    placeholder="Escribe tu pregunta aquí..."
+                    onkeypress="handleKeyPress(event)"
+                >
+                <button class="btn-send" onclick="sendQuestion()" id="sendBtn">
+                    Enviar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const chatMessages = document.getElementById('chatMessages');
+        const questionInput = document.getElementById('questionInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const loading = document.getElementById('loading');
+        const errorMessage = document.getElementById('errorMessage');
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendQuestion();
+            }
+        }
+
+        function askQuickQuestion(question) {
+            questionInput.value = question;
+            sendQuestion();
+        }
+
+        function addMessage(content, isUser, sources = null) {
+            // Remover mensaje de bienvenida si existe
+            const welcomeMsg = chatMessages.querySelector('.welcome-message');
+            if (welcomeMsg) {
+                welcomeMsg.remove();
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'assistant'}`;
+
+            let sourcesHtml = '';
+            if (sources && sources.length > 0) {
+                sourcesHtml = `<div class="sources">Fuentes: ${sources.join(', ')}</div>`;
+            }
+
+            messageDiv.innerHTML = `
+                <div class="message-label">${isUser ? 'Tú' : 'Asistente'}</div>
+                <div class="message-content">
+                    ${content}
+                    ${sourcesHtml}
+                </div>
+            `;
+
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.add('active');
+            setTimeout(() => {
+                errorMessage.classList.remove('active');
+            }, 5000);
+        }
+
+        async function sendQuestion() {
+            const question = questionInput.value.trim();
+
+            if (!question) {
+                showError('Por favor escribe una pregunta');
+                return;
+            }
+
+            // Deshabilitar input y mostrar loading
+            questionInput.disabled = true;
+            sendBtn.disabled = true;
+            loading.classList.add('active');
+
+            // Agregar mensaje del usuario
+            addMessage(question, true);
+            questionInput.value = '';
+
+            try {
+                const response = await fetch('{% url "ask_question" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ question: question })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    addMessage(data.answer, false, data.sources);
+                } else {
+                    showError(data.error || 'Error al procesar la pregunta');
+                    addMessage('Lo siento, hubo un error al procesar tu pregunta. Por favor intenta de nuevo.', false);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Error de conexión');
+                addMessage('Error de conexión. Por favor verifica tu conexión e intenta de nuevo.', false);
+            } finally {
+                // Rehabilitar input y ocultar loading
+                questionInput.disabled = false;
+                sendBtn.disabled = false;
+                loading.classList.remove('active');
+                questionInput.focus();
+            }
+        }
+    </script>
+</body>
+</html>
